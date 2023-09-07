@@ -1,0 +1,153 @@
+import tkinter as tk
+from tkinter import messagebox
+
+# Function to check if the user-provided input is valid
+def is_input_valid(puzzle):
+    # Check rows and columns for duplicate numbers
+    for i in range(9):
+        row_set = set()
+        col_set = set()
+        for j in range(9):
+            if puzzle[i][j] != 0 and puzzle[i][j] in row_set:
+                return False
+            if puzzle[j][i] != 0 and puzzle[j][i] in col_set:
+                return False
+            row_set.add(puzzle[i][j])
+            col_set.add(puzzle[j][i])
+    
+    # Check 3x3 subgrids for duplicate numbers
+    for i in range(0, 9, 3):
+        for j in range(0, 9, 3):
+            subgrid_set = set()
+            for k in range(3):
+                for l in range(3):
+                    num = puzzle[i + k][j + l]
+                    if num != 0 and num in subgrid_set:
+                        return False
+                    subgrid_set.add(num)
+    
+    return True
+
+# Function to check if it's safe to place a number in a given cell
+def is_safe(grid, row, col, num):
+    # Check row
+    for i in range(9):
+            if grid[row][i] == num or grid[i][col] == num or grid[3 * (row // 3) + i // 3][3 * (col // 3) + i % 3] == num:
+                return False
+    return True
+
+# Function to solve Sudoku
+def solve_sudoku():
+    # Retrieve the puzzle from the entry widgets and store it in a 2D list
+    puzzle = []
+    for i in range(9):
+        row = []
+        for j in range(9):
+            value = entry_grid[i][j].get()
+            if value == '':
+                row.append(0)
+            else:
+                try:
+                    num = int(value)
+                    if 1 <= num <= 9:
+                        row.append(num)
+                    else:
+                        messagebox.showerror("Invalid Input", "Please enter numbers from 1 to 9.")
+                        return
+                except ValueError:
+                    messagebox.showerror("Invalid Input", "Please enter valid numbers.")
+                    return
+        puzzle.append(row)
+
+    if not is_input_valid(puzzle):
+        messagebox.showerror("Invalid Input", "The provided Sudoku puzzle is not valid.")
+        return
+
+    if solve(puzzle):
+        # Display the solution in the entry widgets
+        for i in range(9):
+            for j in range(9):
+                entry_grid[i][j].delete(0, tk.END)
+                entry_grid[i][j].insert(0, str(puzzle[i][j]))
+    else:
+        messagebox.showinfo("Sudoku Solver", "No solution exists.")
+
+# Recursive function to solve Sudoku
+def solve(grid):
+    # Find an empty cell
+    empty_cell = find_empty_cell(grid)
+    
+    # If there are no empty cells, the Sudoku is solved
+    if not empty_cell:
+        return True
+    
+    row, col = empty_cell
+
+    # Try each number from 1 to 9
+    for num in range(1, 10):
+        if is_safe(grid, row, col, num):
+            grid[row][col] = num
+
+            # Recursively solve the Sudoku
+            if solve(grid):
+                return True
+
+            # If the current placement does not lead to a solution, backtrack
+            grid[row][col] = 0
+
+    # If no number can be placed in this cell, backtrack
+    return False
+
+# Function to find an empty cell in the Sudoku grid
+def find_empty_cell(grid):
+    for row in range(9):
+        for col in range(9):
+            if grid[row][col] == 0:
+                return (row, col)
+    return None
+
+# Function to clear all input fields in the grid
+def reset_grid():
+    for i in range(9):
+        for j in range(9):
+            entry_grid[i][j].delete(0, tk.END)
+
+# Create the main application window
+root = tk.Tk()
+root.title("Sudoku Solver")
+
+# Create a 9x9 grid of entry widgets for Sudoku input
+entry_grid = []
+for i in range(9):
+    row = []
+    for j in range(9):
+        entry = tk.Entry(root, width=3)
+        entry.grid(row=i, column=j)
+        row.append(entry)
+    entry_grid.append(row)
+
+# Bind arrow keys for navigation
+for i in range(9):
+    for j in range(9):
+        entry_grid[i][j].bind('<Left>', lambda event, i=i, j=j: navigate(event, i, j, -1, 0))
+        entry_grid[i][j].bind('<Right>', lambda event, i=i, j=j: navigate(event, i, j, 1, 0))
+        entry_grid[i][j].bind('<Up>', lambda event, i=i, j=j: navigate(event, i, j, 0, -1))
+        entry_grid[i][j].bind('<Down>', lambda event, i=i, j=j: navigate(event, i, j, 0, 1))
+
+# Function to navigate between entry widgets using arrow keys
+def navigate(event, i, j, x, y):
+    new_i = i + y
+    new_j = j + x
+    if 0 <= new_i < 9 and 0 <= new_j < 9:
+        entry_grid[new_i][new_j].focus()
+
+# Create a Solve button
+solve_button = tk.Button(root, text="Solve", command=solve_sudoku)
+solve_button.grid(row=9, column=0, columnspan=4)
+
+# Create a Reset button
+reset_button = tk.Button(root, text="Reset", command=reset_grid)
+reset_button.grid(row=9, column=5, columnspan=4)
+
+# Main loop to start the application
+root.mainloop()
